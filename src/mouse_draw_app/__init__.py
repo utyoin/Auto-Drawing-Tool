@@ -1,0 +1,1 @@
+"""Mouse-controlled drawing application."""
