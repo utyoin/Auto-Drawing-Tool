@@ -62,29 +62,43 @@ class MouseDrawService:
     ) -> None:
         button_is_left = config.mouse_button == "left"
         step_delay = self._step_delay(config.move_speed)
+        interpolation_spacing = self._interpolation_spacing(config.move_speed)
 
         try:
-            time.sleep(0.25)
+            if config.move_speed <= 100:
+                initial_delay = 0.08
+                move_to_start_delay = 0.015
+                press_delay = 0.008
+            elif config.move_speed <= 200:
+                initial_delay = 0.04
+                move_to_start_delay = 0.008
+                press_delay = 0.004
+            else:
+                initial_delay = 0.02
+                move_to_start_delay = 0.004
+                press_delay = 0.002
+
+            time.sleep(initial_delay)
             for stroke in paths:
                 if stop_event.is_set() or len(stroke.points) < 2:
                     break
 
                 self._move_cursor_absolute(stroke.points[0])
-                time.sleep(0.05)
+                time.sleep(move_to_start_delay)
                 self._send_button_event(button_is_left, is_press=True)
-                time.sleep(0.03)
+                time.sleep(press_delay)
 
                 for start, end in zip(stroke.points, stroke.points[1:]):
                     if stop_event.is_set():
                         break
-                    for point in self._interpolate_segment(start, end):
+                    for point in self._interpolate_segment(start, end, interpolation_spacing):
                         if stop_event.is_set():
                             break
                         self._move_cursor_absolute(point)
                         time.sleep(step_delay)
 
                 self._send_button_event(button_is_left, is_press=False)
-                time.sleep(step_delay * 4)
+                time.sleep(max(0.001, step_delay * 1.2))
         finally:
             try:
                 self._send_button_event(button_is_left, is_press=False)
@@ -129,9 +143,9 @@ class MouseDrawService:
         if sent != 1:
             raise RuntimeError("发送鼠标输入事件失败。")
 
-    def _interpolate_segment(self, start: Point, end: Point) -> list[Point]:
+    def _interpolate_segment(self, start: Point, end: Point, spacing: float) -> list[Point]:
         distance = math.dist((start.x, start.y), (end.x, end.y))
-        steps = max(2, int(distance / 2.0))
+        steps = max(1, int(distance / spacing))
         points: list[Point] = []
         for index in range(1, steps + 1):
             ratio = index / steps
@@ -145,5 +159,22 @@ class MouseDrawService:
 
     @staticmethod
     def _step_delay(speed: int) -> float:
-        clamped = max(1, min(speed, 100))
-        return max(0.0015, 0.016 - clamped * 0.0001)
+        clamped = max(1, min(speed, 300))
+        if clamped <= 100:
+            return max(0.00035, 0.009 - clamped * 0.00008)
+        if clamped <= 200:
+            extra = clamped - 100
+            return max(0.0001, 0.001 - extra * 0.000009)
+        extra = clamped - 200
+        return max(0.00002, 0.0001 - extra * 0.0000008)
+
+    @staticmethod
+    def _interpolation_spacing(speed: int) -> float:
+        clamped = max(1, min(speed, 300))
+        if clamped <= 100:
+            return 2.0
+        if clamped <= 200:
+            extra = clamped - 100
+            return min(8.0, 2.0 + extra * 0.05)
+        extra = clamped - 200
+        return min(16.0, 8.0 + extra * 0.08)

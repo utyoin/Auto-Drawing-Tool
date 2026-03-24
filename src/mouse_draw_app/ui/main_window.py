@@ -83,7 +83,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("鼠标控制绘图软件")
+        self.setWindowTitle("Auto-drawpic")
         self.resize(1280, 760)
 
         self.image_outline_service = ImageOutlineService()
@@ -266,8 +266,8 @@ class MainWindow(QMainWindow):
         speed_row = QHBoxLayout()
         speed_row.addWidget(QLabel("绘制速度"))
         self.speed_slider = QSlider(Qt.Horizontal)
-        self.speed_slider.setRange(1, 100)
-        self.speed_slider.setValue(30)
+        self.speed_slider.setRange(1, 300)
+        self.speed_slider.setValue(65)
         self.speed_slider.valueChanged.connect(self._update_speed_label)
         speed_row.addWidget(self.speed_slider, stretch=1)
         self.speed_value_label = QLabel()
